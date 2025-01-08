@@ -23,7 +23,7 @@ public class ClienteChat {
 
     //---------------------------------------------------------------------
 
-     @FXML
+    @FXML
     private TextField inputAlias; // Campo para ingresar alias
     @FXML
     private Button btnConectar; // Botón para conectarse
@@ -82,7 +82,7 @@ public class ClienteChat {
                 btnConectar.setDisable(true);
                 inputAlias.setDisable(true);
 
-                // Iniciar hilo para leer mensajes
+                // Iniciar hilo para leer mensajes (usando HiloCliente)
                 iniciarLectura();
             } else {
                 chatArea.appendText("Error al conectarse: " + respuesta + "\n");
@@ -128,27 +128,40 @@ public class ClienteChat {
     }
 
     private void iniciarLectura() {
-        hiloLectura = new Thread(() -> {
-            try {
-                while (true) {
-                    String mensaje = entrada.readUTF();
-                    Platform.runLater(() -> chatArea.appendText(mensaje + "\n"));
+        // Usamos el HiloCliente en lugar de crear un Thread directamente
+        hiloLectura = new Thread(new HiloCliente(entrada));
+        hiloLectura.setDaemon(true);
+        hiloLectura.start();
+    }
+    
+    // HiloCliente modificado para actualizar la interfaz gráfica
+    public class HiloCliente implements Runnable {
+        private final DataInputStream entrada;
+
+        public HiloCliente(DataInputStream entrada) {
+            this.entrada = entrada;
+        }
+
+        @Override
+        public void run() {
+            while (true) {
+                try {
+                    String mensajeRecibido = entrada.readUTF();
+                    Platform.runLater(() -> chatArea.appendText(mensajeRecibido + "\n"));
 
                     // Si es un comando LST, actualizar lista de usuarios
-                    if (mensaje.startsWith("LST")) {
-                        String[] usuarios = mensaje.substring(4).split(", ");
+                    if (mensajeRecibido.startsWith("LST")) {
+                        String[] usuarios = mensajeRecibido.substring(4).split(", ");
                         Platform.runLater(() -> {
                             listaUsuarios.getItems().clear();
                             listaUsuarios.getItems().addAll(usuarios);
                         });
                     }
+                } catch (IOException e) {
+                    Platform.runLater(() -> chatArea.appendText("Conexión cerrada.\n"));
+                    break;
                 }
-            } catch (IOException e) {
-                Platform.runLater(() -> chatArea.appendText("Conexión cerrada.\n"));
             }
-        });
-        hiloLectura.setDaemon(true);
-        hiloLectura.start();
+        }
     }
-    
 }
