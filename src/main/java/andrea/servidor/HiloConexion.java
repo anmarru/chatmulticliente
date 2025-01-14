@@ -31,9 +31,10 @@ public class HiloConexion implements Runnable {
     @Override
     public void run() {
         try (DataInputStream entrada = new DataInputStream(cliente.getSocketCliente().getInputStream());
-            DataOutputStream salida = new DataOutputStream(cliente.getSocketCliente().getOutputStream())) {
-        
+                DataOutputStream salida = new DataOutputStream(cliente.getSocketCliente().getOutputStream())) {
+
             cliente.setSalida(salida);
+
             String mensajeRecibido = entrada.readUTF();
 
             // validacion para los mensajes
@@ -45,13 +46,23 @@ public class HiloConexion implements Runnable {
             // separo el mansaje en dos partes comado y mensaje
             String[] parametroComandos = mensajeRecibido.split(" ", 2);
             String comando = parametroComandos[0];
-            String parametro = parametroComandos.length > 1 ? parametroComandos[1] : "";
+            String parametro = parametroComandos.length > 1 ? parametroComandos[1] : " ";
 
-            //validacion de conexion si no enviamos al cliente NOK
+            // validacion de conexion si no enviamos al cliente NOK
             if (!CON.equals(comando)) {
                 salida.writeUTF(NOK);
                 return;
             }
+
+             // El cliente se conecta con su alias
+             if (CON.equals(comando)) {
+                cliente.setAlias(parametro.trim());
+                listaClientes.add(cliente);
+                System.out.println(cliente.getAlias() + " conectado.");
+                notificarListaUsuarios(); // Envía la lista de usuarios a todos
+                //continue; // Salta al siguiente ciclo
+            }
+            //cliente.setAlias(parametro);
 
             while (cliente.getSocketCliente().isConnected()) {
                 mensajeRecibido = entrada.readUTF();
@@ -63,8 +74,8 @@ public class HiloConexion implements Runnable {
                     case PRV:
                         String[] destinoMensaje = parametro.split(" ", 2);
                         if (destinoMensaje.length < 2) {
-                            salida.writeUTF(NOK);
-                            continue;
+                            salida.writeUTF(POK);
+                            break;
                         }
                         String destinatario = destinoMensaje[0];
                         String mensaje = destinoMensaje[1];
@@ -76,20 +87,23 @@ public class HiloConexion implements Runnable {
                             DataOutputStream salidaDestino = destinatarioEncontrado.get().getSalida();
                             salidaDestino.writeUTF(PRV + " " + cliente.getAlias() + " " + mensaje);
                         } else {
-                            salida.writeUTF(NOK);
+                            salida.writeUTF(POK);
                         }
                         break;
 
                     case EXI:
                         System.out.println(cliente.getAlias() + " Se desconecto");
+                        //TODO 
+                        listaClientes.remove(cliente);
+                        notificarListaUsuarios();
                         return;
 
                     case NOP:
                         // TODO completar
                         salida.writeUTF(NOK);
                         break;
-                        // envio la lista de clientes conectados
-                    case LST:
+                    // envio la lista de clientes conectados
+                    case LUS:
                         StringBuilder clientes = new StringBuilder();
                         for (Cliente c : listaClientes) {
                             clientes.append(c.getAlias()).append(", ");
@@ -100,43 +114,42 @@ public class HiloConexion implements Runnable {
                     case MSG:
                         for (Cliente c : listaClientes) {
                             if (!c.equals(cliente)) {
-                                c.getSalida().writeUTF(MSG + " " + cliente.getAlias() + ": " + parametro);
+                                c.getSalida().writeUTF(CHT + " " + cliente.getAlias() + ": " + parametro);
                             }
                         }
                         break;
 
-                    case CHT:
-                        //formato "CHT usuario mensaje"
-                        String[] splitUsuarioMensaje = parametro.split(" ", 2);
-                        if (splitUsuarioMensaje.length < 2) {
-                            salida.writeUTF(NOK); //parametros incorrectos
-                            continue;
-                        }
-
-                        String remitente = splitUsuarioMensaje[0]; //nombre del remitente
-                        String mensajeParaTodos = splitUsuarioMensaje[1]; //mensaje para todos
-
-                        //mensaje a todos los clientes conectados
-                        for (Cliente c : listaClientes) {
-                            DataOutputStream salidaCliente = c.getSalida();
-                            salidaCliente.writeUTF(CHT + " " + remitente + ": " + mensajeParaTodos);
-                        }
-                        break;
-
-                        case POK:
-                        salida.writeUTF(POK);
-                        break;
                     default:
-                    salida.writeUTF(NOK);
+                        salida.writeUTF(NOK);
                         break;
                 }
             }
 
         } catch (Exception e) {
-        System.out.println("Error con el cliente " + cliente.getAlias() + ": " + e.getMessage());
-        e.printStackTrace();
+            System.out.println("Error con el cliente " + cliente.getAlias() + ": " + e.getMessage());
+            e.printStackTrace();
         }
 
     }
+
+    private void notificarListaUsuarios() {
+        StringBuilder clientes = new StringBuilder();
+        for (Cliente c : listaClientes) {
+            clientes.append(c.getAlias()).append(", ");
+        }
+        if (clientes.length() > 0) {
+            clientes.setLength(clientes.length() - 2); // Elimina la última coma y espacio
+        }
+        String mensaje = LST + " " + clientes.toString();
+    
+        for (Cliente c : listaClientes) {
+            try {
+                c.getSalida().writeUTF(mensaje);
+            } catch (Exception e) {
+                System.out.println("Error al enviar lista de usuarios a " + c.getAlias());
+            }
+        }
+    }
+    
 
 }

@@ -1,6 +1,7 @@
 module andrea {
     requires javafx.controls;
     requires javafx.fxml;
+    requires javafx.graphics;
 
     /*opens andrea to javafx.fxml;
     exports andrea; */

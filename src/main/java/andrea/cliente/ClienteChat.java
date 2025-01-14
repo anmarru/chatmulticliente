@@ -2,10 +2,10 @@ package andrea.cliente;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.IOException;
 import java.net.Socket;
 
 import javafx.application.Platform;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.ListView;
@@ -15,153 +15,127 @@ import javafx.scene.control.TextField;
 public class ClienteChat {
 
     @FXML
-    private TextField mensajeTextField;
-    @FXML
-    private Button enviarBoton;
-    @FXML
-    private ListView listachatListview;
-
-    //---------------------------------------------------------------------
-
-    @FXML
     private TextField inputAlias; // Campo para ingresar alias
     @FXML
-    private Button btnConectar; // Botón para conectarse
+    private Button btnConectar; // Botón de conectar
+    @FXML
+    private TextArea chatArea; // Área para mostrar mensajes
     @FXML
     private TextField inputMensaje; // Campo para escribir mensajes
     @FXML
-    private Button btnEnviar; // Botón para enviar mensaje
-    @FXML
-    private TextArea chatArea; // Área para mostrar mensajes de chat
+    private Button btnEnviar; // Botón para enviar mensajes
     @FXML
     private ListView<String> listaUsuarios; // Lista de usuarios conectados
     @FXML
-    private Button btnDesconectar; // Botón para desconectarse
+    private Button btnDesconectar; // Botón para desconectar
 
-    private Socket socketCliente;
+    private Socket socket;
     private DataInputStream entrada;
     private DataOutputStream salida;
+    private String alias;
 
-    private static final String HOST = "127.0.0.1"; // Dirección del servidor
-    private static final int PUERTO = 4444; // Puerto del servidor
+    @FXML
+    private void conectar(ActionEvent event) {
+        alias = inputAlias.getText().trim();
+        if (alias.isEmpty()) {
+            mostrarMensaje("Debes ingresar un alias antes de conectarte.");
+            return;
+        }
 
-    private Thread hiloLectura;
+        try {
+            socket = new Socket("localhost", 4444);
+            entrada = new DataInputStream(socket.getInputStream());
+            salida = new DataOutputStream(socket.getOutputStream());
+
+            // Enviar comando de conexión al servidor
+            salida.writeUTF("CON " + alias);
+
+            // Inicia un hilo para escuchar mensajes del servidor
+            Thread listenerThread = new Thread(this::escucharMensajes);
+            listenerThread.setDaemon(true);
+            listenerThread.start();
+
+            mostrarMensaje("Conectado al servidor como: " + alias);
+            btnConectar.setDisable(true);
+            inputAlias.setDisable(true);
+            btnEnviar.setDisable(false);
+            btnDesconectar.setDisable(false);
+
+        } catch (Exception e) {
+            mostrarMensaje("Error al conectar al servidor: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    private void enviarMensaje(ActionEvent event) {
+        String mensaje = inputMensaje.getText().trim();
+        if (mensaje.isEmpty()) {
+            return;
+        }
+
+        try {
+            salida.writeUTF(mensaje);
+            inputMensaje.clear();
+        } catch (Exception e) {
+            mostrarMensaje("Error al enviar el mensaje: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    private void desconectar(ActionEvent event) {
+        try {
+            if (socket != null && !socket.isClosed()) {
+                salida.writeUTF("EXI"); // Notificar al servidor que este cliente se desconecta
+                socket.close();
+            }
+            mostrarMensaje("Desconectado del servidor.");
+        } catch (Exception e) {
+            mostrarMensaje("Error al desconectar: " + e.getMessage());
+        } finally {
+            Platform.runLater(() -> {
+                btnConectar.setDisable(false);
+                inputAlias.setDisable(false);
+                btnEnviar.setDisable(true);
+                btnDesconectar.setDisable(true);
+            });
+        }
+    }
+
+    private void escucharMensajes() {
+        try {
+            while (socket != null && socket.isConnected()) {
+                String mensaje = entrada.readUTF();
+                Platform.runLater(() -> procesarMensaje(mensaje));
+            }
+        } catch (Exception e) {
+            Platform.runLater(() -> mostrarMensaje("Conexión cerrada"));
+        }
+    }
+
+    private void procesarMensaje(String mensaje) {
+        if (mensaje.startsWith("LUS")) {
+            // Actualizar lista de usuarios conectados
+            String[] usuarios = mensaje.substring(4).split(", ");
+            //listaUsuarios.getItems().setAll(usuarios);
+            Platform.runLater(() -> listaUsuarios.getItems().setAll(usuarios));
+        } else {
+            // Mostrar mensaje en el área de chat
+            chatArea.appendText(mensaje + "\n");
+        }
+    }
+
+    @FXML
+    public void mostrarLista (){
+
+    }
+
+    private void mostrarMensaje(String mensaje) {
+        chatArea.appendText(mensaje + "\n");
+    }
 
     @FXML
     public void initialize() {
-        // Inicializar botones y campos
         btnEnviar.setDisable(true);
         btnDesconectar.setDisable(true);
-    }
-
-    @FXML
-    private void conectar() {
-        try {
-            String alias = inputAlias.getText().trim();
-            if (alias.isEmpty()) {
-                chatArea.appendText("Debes ingresar un alias para conectarte.\n");
-                return;
-            }
-
-            // Conectarse al servidor
-            socketCliente = new Socket(HOST, PUERTO);
-            entrada = new DataInputStream(socketCliente.getInputStream());
-            salida = new DataOutputStream(socketCliente.getOutputStream());
-
-            // Enviar comando de conexión
-            salida.writeUTF("CON " + alias);
-
-            // Leer respuesta del servidor
-            String respuesta = entrada.readUTF();
-            if (respuesta.equals("OK")) {
-                chatArea.appendText("Conectado como: " + alias + "\n");
-
-                // Habilitar botones de chat
-                btnEnviar.setDisable(false);
-                btnDesconectar.setDisable(false);
-                btnConectar.setDisable(true);
-                inputAlias.setDisable(true);
-
-                // Iniciar hilo para leer mensajes (usando HiloCliente)
-                iniciarLectura();
-            } else {
-                chatArea.appendText("Error al conectarse: " + respuesta + "\n");
-            }
-        } catch (IOException e) {
-            chatArea.appendText("Error al conectar con el servidor: " + e.getMessage() + "\n");
-        }
-    }
-
-    @FXML
-    private void enviarMensaje() {
-        try {
-            String mensaje = inputMensaje.getText().trim();
-            if (!mensaje.isEmpty()) {
-                salida.writeUTF("MSG " + mensaje); // Enviar mensaje al servidor
-                inputMensaje.clear();
-            }
-        } catch (IOException e) {
-            chatArea.appendText("Error al enviar el mensaje: " + e.getMessage() + "\n");
-        }
-    }
-
-    @FXML
-    private void desconectar() {
-        try {
-            salida.writeUTF("EXI"); // Enviar comando de salida al servidor
-            socketCliente.close();
-
-            chatArea.appendText("Desconectado del servidor.\n");
-
-            // Deshabilitar botones de chat
-            btnEnviar.setDisable(true);
-            btnDesconectar.setDisable(true);
-            btnConectar.setDisable(false);
-            inputAlias.setDisable(false);
-
-            if (hiloLectura != null) {
-                hiloLectura.interrupt();
-            }
-        } catch (IOException e) {
-            chatArea.appendText("Error al desconectarse: " + e.getMessage() + "\n");
-        }
-    }
-
-    private void iniciarLectura() {
-        // Usamos el HiloCliente en lugar de crear un Thread directamente
-        hiloLectura = new Thread(new HiloCliente(entrada));
-        hiloLectura.setDaemon(true);
-        hiloLectura.start();
-    }
-    
-    // HiloCliente modificado para actualizar la interfaz gráfica
-    public class HiloCliente implements Runnable {
-        private final DataInputStream entrada;
-
-        public HiloCliente(DataInputStream entrada) {
-            this.entrada = entrada;
-        }
-
-        @Override
-        public void run() {
-            while (true) {
-                try {
-                    String mensajeRecibido = entrada.readUTF();
-                    Platform.runLater(() -> chatArea.appendText(mensajeRecibido + "\n"));
-
-                    // Si es un comando LST, actualizar lista de usuarios
-                    if (mensajeRecibido.startsWith("LST")) {
-                        String[] usuarios = mensajeRecibido.substring(4).split(", ");
-                        Platform.runLater(() -> {
-                            listaUsuarios.getItems().clear();
-                            listaUsuarios.getItems().addAll(usuarios);
-                        });
-                    }
-                } catch (IOException e) {
-                    Platform.runLater(() -> chatArea.appendText("Conexión cerrada.\n"));
-                    break;
-                }
-            }
-        }
     }
 }
