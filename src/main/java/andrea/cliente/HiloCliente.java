@@ -1,4 +1,4 @@
-package andrea.cliente;
+/* package andrea.cliente;
 
 import java.io.DataInputStream;
 
@@ -27,4 +27,4 @@ public class HiloCliente implements Runnable{
         
     }
         
-}
+}*/

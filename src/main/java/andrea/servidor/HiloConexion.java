@@ -23,27 +23,31 @@ public class HiloConexion implements Runnable {
     private static final String POK = "POK";
     private static final String CHT = "CHT";
 
+    //inicializo con el cliente y la lista compartida de los clientes
     public HiloConexion(Cliente cliente, List<Cliente> listaClientes) {
         this.cliente = cliente;
+        //esta es la lista que comparte los clientes
         this.listaClientes = listaClientes;
     }
 
     @Override
     public void run() {
+        //canales de entrada y salida al cliente
         try (DataInputStream entrada = new DataInputStream(cliente.getSocketCliente().getInputStream());
                 DataOutputStream salida = new DataOutputStream(cliente.getSocketCliente().getOutputStream())) {
 
+            //asigno la salida del cliente para que pueda recibir mensajes
             cliente.setSalida(salida);
 
             String mensajeRecibido = entrada.readUTF();
 
-            // validacion para los mensajes
+            //validacion para los mensajes
             if (!mensajeRecibido.matches("^[A-Z]{3}\\s.*$")) {
                 salida.writeUTF(NOK);
                 return;
             }
 
-            // separo el mansaje en dos partes comado y mensaje
+            //separo el mansaje en dos partes comado y mensaje
             String[] parametroComandos = mensajeRecibido.split(" ", 2);
             String comando = parametroComandos[0];
             String parametro = parametroComandos.length > 1 ? parametroComandos[1] : " ";
@@ -138,7 +142,7 @@ public class HiloConexion implements Runnable {
             clientes.append(c.getAlias()).append(", ");
         }
         if (clientes.length() > 0) {
-            clientes.setLength(clientes.length() - 2); // Elimina la última coma y espacio
+            clientes.setLength(clientes.length() - 2); //elimina la última coma y espacio
         }
         String mensaje = LST + " " + clientes.toString();
     

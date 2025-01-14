@@ -15,23 +15,23 @@ import javafx.scene.control.TextField;
 public class ClienteChat {
 
     @FXML
-    private TextField inputAlias; // Campo para ingresar alias
+    private TextField inputAlias;
     @FXML
-    private Button btnConectar; // Botón de conectar
+    private Button btnConectar;
     @FXML
-    private TextArea chatArea; // Área para mostrar mensajes
+    private TextArea chatArea;
     @FXML
-    private TextField inputMensaje; // Campo para escribir mensajes
+    private TextField inputMensaje;
     @FXML
-    private Button btnEnviar; // Botón para enviar mensajes
+    private Button btnEnviar;
     @FXML
-    private ListView<String> listaUsuarios; // Lista de usuarios conectados
+    private ListView<String> listaUsuarios;
     @FXML
-    private Button btnDesconectar; // Botón para desconectar
+    private Button btnDesconectar;
 
-    private Socket socket;
-    private DataInputStream entrada;
-    private DataOutputStream salida;
+    private Socket socket;// para conetarse al servidor
+    private DataInputStream entrada;// flujo de entrada para recibir los mensajes del servidor
+    private DataOutputStream salida;// flujo de salida para enviar enviar mej al servidor
     private String alias;
 
     @FXML
@@ -47,11 +47,20 @@ public class ClienteChat {
             entrada = new DataInputStream(socket.getInputStream());
             salida = new DataOutputStream(socket.getOutputStream());
 
-            // Enviar comando de conexión al servidor
+            // enviar comando de conexión al servidor
             salida.writeUTF("CON " + alias);
 
-            // Inicia un hilo para escuchar mensajes del servidor
+            //escuchar respuesta del servidor para validar la conexión
+          /*   String respuesta = entrada.readUTF();
+            if (respuesta.equals("NOK Alias duplicado")) {
+                mostrarMensaje("Alias duplicado, elige otro.");
+                socket.close();
+                return;
+            } */
+
+            // inicia un hilo para escuchar mensajes del servidor
             Thread listenerThread = new Thread(this::escucharMensajes);
+            // hilo de usuario no se ve
             listenerThread.setDaemon(true);
             listenerThread.start();
 
@@ -101,6 +110,8 @@ public class ClienteChat {
         }
     }
 
+    // se mantiene escuchando los mensajes del servidormientras esta conectado
+    // los mensajes recibidos se pueden enseñar en la ui usando Platform.runLater()
     private void escucharMensajes() {
         try {
             while (socket != null && socket.isConnected()) {
@@ -116,7 +127,7 @@ public class ClienteChat {
         if (mensaje.startsWith("LUS")) {
             // Actualizar lista de usuarios conectados
             String[] usuarios = mensaje.substring(4).split(", ");
-            //listaUsuarios.getItems().setAll(usuarios);
+            // listaUsuarios.getItems().setAll(usuarios);
             Platform.runLater(() -> listaUsuarios.getItems().setAll(usuarios));
         } else {
             // Mostrar mensaje en el área de chat
@@ -125,7 +136,7 @@ public class ClienteChat {
     }
 
     @FXML
-    public void mostrarLista (){
+    public void mostrarLista() {
 
     }
 
