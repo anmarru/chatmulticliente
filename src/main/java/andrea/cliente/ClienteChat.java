@@ -124,7 +124,7 @@ public class ClienteChat {
     }
 
     private void procesarMensaje(String mensaje) {
-        if (mensaje.startsWith("LUS")) {
+        if (mensaje.startsWith("LST")) {
             // Actualizar lista de usuarios conectados
             String[] usuarios = mensaje.substring(4).split(", ");
             // listaUsuarios.getItems().setAll(usuarios);

@@ -59,9 +59,9 @@ public class HiloConexion implements Runnable {
             }
 
              // El cliente se conecta con su alias
-             if (CON.equals(comando)) {
+            if (CON.equals(comando)) {
                 cliente.setAlias(parametro.trim());
-                listaClientes.add(cliente);
+                //listaClientes.add(cliente);
                 System.out.println(cliente.getAlias() + " conectado.");
                 notificarListaUsuarios(); // Envía la lista de usuarios a todos
                 //continue; // Salta al siguiente ciclo
