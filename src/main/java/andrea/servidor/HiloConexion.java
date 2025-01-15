@@ -77,10 +77,10 @@ public class HiloConexion implements Runnable {
                 switch (comando) {
                     case PRV:
                         String[] destinoMensaje = parametro.split(" ", 2);
-                        if (destinoMensaje.length < 2) {
+                        /* if (destinoMensaje.length < 2 ) {
                             salida.writeUTF(POK);
                             break;
-                        }
+                        } */
                         String destinatario = destinoMensaje[0];
                         String mensaje = destinoMensaje[1];
 
@@ -97,7 +97,7 @@ public class HiloConexion implements Runnable {
 
                     case EXI:
                         System.out.println(cliente.getAlias() + " Se desconecto");
-                        //TODO 
+                        
                         listaClientes.remove(cliente);
                         notificarListaUsuarios();
                         return;
@@ -107,18 +107,19 @@ public class HiloConexion implements Runnable {
                         salida.writeUTF(NOK);
                         break;
                     // envio la lista de clientes conectados
-                    case LUS:
+                   /*  case LUS:
                         StringBuilder clientes = new StringBuilder();
                         for (Cliente c : listaClientes) {
                             clientes.append(c.getAlias()).append(", ");
                         }
                         salida.writeUTF(LST + " " + clientes.toString().trim());
-                        break;
+                        break; */
                     // mensaje a todos
                     case MSG:
                         for (Cliente c : listaClientes) {
                             if (!c.equals(cliente)) {
                                 c.getSalida().writeUTF(CHT + " " + cliente.getAlias() + ": " + parametro);
+                                salida.writeUTF("Mensaje enviado: "+OK);
                             }
                         }
                         break;

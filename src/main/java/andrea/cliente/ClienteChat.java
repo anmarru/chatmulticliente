@@ -43,7 +43,8 @@ public class ClienteChat {
         }
 
         try {
-            socket = new Socket("localhost", 4444);
+            socket = new Socket("178.18.184.250", 9876);
+            
             entrada = new DataInputStream(socket.getInputStream());
             salida = new DataOutputStream(socket.getOutputStream());
 
@@ -135,10 +136,7 @@ public class ClienteChat {
         }
     }
 
-    @FXML
-    public void mostrarLista() {
 
-    }
 
     private void mostrarMensaje(String mensaje) {
         chatArea.appendText(mensaje + "\n");
