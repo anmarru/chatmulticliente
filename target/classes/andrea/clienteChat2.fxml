@@ -5,17 +5,22 @@
 <?import javafx.scene.control.ListView?>
 <?import javafx.scene.control.TextArea?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
-<VBox alignment="CENTER" prefHeight="600" prefWidth="400" spacing="10"
-    xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1"
-    fx:controller="andrea.cliente.ClienteChat">
+<VBox alignment="CENTER" prefHeight="600" prefWidth="400" spacing="10" stylesheets="@estilo_css/estilo.css" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="andrea.cliente.ClienteChat">
 
 
-    <HBox alignment="CENTER" spacing="10">
+    <HBox alignment="CENTER" spacing="6.0">
+      <ImageView fitHeight="51.0" fitWidth="37.0" pickOnBounds="true" preserveRatio="true">
+         <image>
+            <Image url="@imagenes/chat.png" />
+         </image>
+      </ImageView>
         <TextField fx:id="inputAlias" prefWidth="250" promptText="Ingresa tu alias" />
-        <Button fx:id="btnConectar" onAction="#conectar" text="Conectar" />
+        <Button fx:id="btnConectar" onAction="#conectar" prefHeight="36.0" prefWidth="98.0" text="Conectar" />
     </HBox>
 
 

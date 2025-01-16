@@ -75,7 +75,7 @@
 
 /* Styling for the button when it is connected */
 #btnConectar {
-    -fx-background-color: #008CBA; /* Azul para el botón de conectar */
+    -fx-background-color: #0c85ad; /* Azul para el botón de conectar */
 }
 
 #btnConectar:hover {
@@ -83,7 +83,7 @@
 }
 
 #btnDesconectar {
-    -fx-background-color: #f44336; /* Rojo para el botón de desconectar */
+    -fx-background-color: #c21b0f; /* Rojo para el botón de desconectar */
 }
 
 #btnDesconectar:hover {

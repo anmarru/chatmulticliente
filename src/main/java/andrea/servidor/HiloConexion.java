@@ -64,6 +64,7 @@ public class HiloConexion implements Runnable {
                 //listaClientes.add(cliente);
                 System.out.println(cliente.getAlias() + " conectado.");
                 notificarListaUsuarios(); // Envía la lista de usuarios a todos
+                salida.writeUTF(CON +" "+cliente.getAlias());
                 //continue; // Salta al siguiente ciclo
             }
             //cliente.setAlias(parametro);
@@ -77,10 +78,10 @@ public class HiloConexion implements Runnable {
                 switch (comando) {
                     case PRV:
                         String[] destinoMensaje = parametro.split(" ", 2);
-                        /* if (destinoMensaje.length < 2 ) {
+                        if (destinoMensaje.length < 2) {
                             salida.writeUTF(POK);
                             break;
-                        } */
+                        }
                         String destinatario = destinoMensaje[0];
                         String mensaje = destinoMensaje[1];
 
@@ -96,30 +97,39 @@ public class HiloConexion implements Runnable {
                         break;
 
                     case EXI:
-                        System.out.println(cliente.getAlias() + " Se desconecto");
-                        
+                    /*  System.out.println(cliente.getAlias() + " Se desconecto");
                         listaClientes.remove(cliente);
                         notificarListaUsuarios();
-                        return;
+                        return;*/
+                        try {
+                            System.out.println(cliente.getAlias() + " se desconectó");
+                            listaClientes.remove(cliente); // Elimina al cliente de la lista
+                            notificarListaUsuarios(); // Notifica a los demás usuarios
+                            cliente.getSocketCliente().close(); // Cierra el socket
+                            entrada.close(); // Cierra el flujo de entrada
+                            salida.close(); // Cierra el flujo de salida
+                        } catch (Exception e) {
+                            System.out.println("Error al cerrar conexión del cliente " + cliente.getAlias() + ": " + e.getMessage());
+                        }
+                        return; // Sale del método y rompe el ciclo
 
                     case NOP:
                         // TODO completar
                         salida.writeUTF(NOK);
                         break;
                     // envio la lista de clientes conectados
-                   /*  case LUS:
+                    case LUS:
                         StringBuilder clientes = new StringBuilder();
                         for (Cliente c : listaClientes) {
                             clientes.append(c.getAlias()).append(", ");
                         }
                         salida.writeUTF(LST + " " + clientes.toString().trim());
-                        break; */
+                        break;
                     // mensaje a todos
                     case MSG:
                         for (Cliente c : listaClientes) {
                             if (!c.equals(cliente)) {
                                 c.getSalida().writeUTF(CHT + " " + cliente.getAlias() + ": " + parametro);
-                                salida.writeUTF("Mensaje enviado: "+OK);
                             }
                         }
                         break;

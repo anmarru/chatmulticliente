@@ -3,14 +3,19 @@ package andrea.cliente;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.net.Socket;
+import java.util.Optional;
 
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.scene.Node;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.stage.Stage;
 
 public class ClienteChat {
 
@@ -43,7 +48,8 @@ public class ClienteChat {
         }
 
         try {
-            socket = new Socket("178.18.184.250", 9876);
+            socket = new Socket("79.170.148.110", 4444);
+          //  socket = new Socket("localhost", 4444);
             
             entrada = new DataInputStream(socket.getInputStream());
             salida = new DataOutputStream(socket.getOutputStream());
@@ -65,7 +71,7 @@ public class ClienteChat {
             listenerThread.setDaemon(true);
             listenerThread.start();
 
-            mostrarMensaje("Conectado al servidor como: " + alias);
+            //mostrarMensaje("Conectado al servidor como: " + alias);
             btnConectar.setDisable(true);
             inputAlias.setDisable(true);
             btnEnviar.setDisable(false);
@@ -84,14 +90,14 @@ public class ClienteChat {
         }
 
         try {
-            salida.writeUTF(mensaje);
+            salida.writeUTF("MSG "+mensaje);
             inputMensaje.clear();
         } catch (Exception e) {
             mostrarMensaje("Error al enviar el mensaje: " + e.getMessage());
         }
     }
 
-    @FXML
+    /*@FXML
     private void desconectar(ActionEvent event) {
         try {
             if (socket != null && !socket.isClosed()) {
@@ -107,9 +113,42 @@ public class ClienteChat {
                 inputAlias.setDisable(false);
                 btnEnviar.setDisable(true);
                 btnDesconectar.setDisable(true);
+                
             });
         }
+    }*/
+    @FXML
+private void desconectar(ActionEvent event) {
+    // Mostrar una alerta de confirmación antes de proceder
+    Alert alerta = new Alert(Alert.AlertType.CONFIRMATION);
+    alerta.setTitle("Confirmar desconexión");
+    alerta.setHeaderText("¿Estás seguro de que deseas desconectarte?");
+    alerta.setContentText("Si te desconectas, se cerrará la ventana.");
+
+    // Esperar la respuesta del usuario
+    Optional<ButtonType> resultado = alerta.showAndWait();
+    if (resultado.isPresent() && resultado.get() == ButtonType.OK) {
+        try {
+            if (socket != null && !socket.isClosed()) {
+                salida.writeUTF("EXI"); // Notificar al servidor que este cliente se desconecta
+                socket.close();
+            }
+            mostrarMensaje("Desconectado del servidor.");
+        } catch (Exception e) {
+            mostrarMensaje("Error al desconectar: " + e.getMessage());
+        } finally {
+            Platform.runLater(() -> {
+                // Obtener el Stage desde el evento o algún nodo
+                Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+                stage.close(); // Cerrar la ventana
+            });
+        }
+    } else {
+        // El usuario canceló la desconexión
+        mostrarMensaje("La desconexión fue cancelada.");
     }
+}
+
 
     // se mantiene escuchando los mensajes del servidormientras esta conectado
     // los mensajes recibidos se pueden enseñar en la ui usando Platform.runLater()
@@ -130,6 +169,7 @@ public class ClienteChat {
             String[] usuarios = mensaje.substring(4).split(", ");
             // listaUsuarios.getItems().setAll(usuarios);
             Platform.runLater(() -> listaUsuarios.getItems().setAll(usuarios));
+
         } else {
             // Mostrar mensaje en el área de chat
             chatArea.appendText(mensaje + "\n");

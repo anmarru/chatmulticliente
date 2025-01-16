@@ -6,6 +6,7 @@ import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.image.Image;
 import javafx.stage.Stage;
 
 /**
@@ -18,6 +19,8 @@ public class App extends Application {
     @Override
     public void start(Stage stage) throws IOException {
         scene = new Scene(loadFXML("clienteChat2"), 640, 480);
+        stage.setTitle("CHAT MULTICLIENTE");
+        stage.getIcons().add(new Image(App.class.getResourceAsStream("imagenes/chat.png")));
         stage.setScene(scene);
         stage.show();
     }
