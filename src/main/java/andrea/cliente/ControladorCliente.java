@@ -17,7 +17,7 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 
-public class ClienteChat {
+public class ControladorCliente {
 
     @FXML
     private TextField inputAlias;
@@ -164,7 +164,7 @@ private void desconectar(ActionEvent event) {
     }
 
     private void procesarMensaje(String mensaje) {
-        if (mensaje.startsWith("LST")) {
+        if (mensaje.startsWith("LUS")) {
             // Actualizar lista de usuarios conectados
             String[] usuarios = mensaje.substring(4).split(", ");
             // listaUsuarios.getItems().setAll(usuarios);
@@ -186,5 +186,9 @@ private void desconectar(ActionEvent event) {
     public void initialize() {
         btnEnviar.setDisable(true);
         btnDesconectar.setDisable(true);
+    }
+
+    public void addUsuarioNuevo(String usuario){
+        listaUsuarios.getItems();
     }
 }

@@ -125,7 +125,7 @@ public class HiloConexion implements Runnable {
                         salida.writeUTF(NOK);
                         break;
                     // envio la lista de clientes conectados
-                    case LUS:
+                    case LST:
                         StringBuilder clientes = new StringBuilder();
                         for (Cliente c : listaClientes) {
                             clientes.append(c.getAlias()).append(", ");
@@ -172,6 +172,8 @@ public class HiloConexion implements Runnable {
             }
         }
     }
+
+
     
 
 }

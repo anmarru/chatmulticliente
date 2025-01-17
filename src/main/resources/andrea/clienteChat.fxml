@@ -48,7 +48,7 @@
 
 <VBox xmlns="http://javafx.com/javafx/8.0.171"
       xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="andrea.cliente.ClienteChat"
+      fx:controller="andrea.cliente.ControladorCliente"
       spacing="10" alignment="CENTER" prefWidth="400" prefHeight="300">
 
     <!-- Área de chat -->
