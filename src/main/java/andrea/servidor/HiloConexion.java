@@ -58,15 +58,22 @@ public class HiloConexion implements Runnable {
                 return;
             }
 
-             // El cliente se conecta con su alias
-            if (CON.equals(comando)) {
-                cliente.setAlias(parametro.trim());
-                //listaClientes.add(cliente);
-                System.out.println(cliente.getAlias() + " conectado.");
-                notificarListaUsuarios(); // Envía la lista de usuarios a todos
-                salida.writeUTF(CON +" "+cliente.getAlias());
-                //continue; // Salta al siguiente ciclo
+            String nuevoAlias=parametro;
+            System.out.println(nuevoAlias);
+            
+            if(listaClientes.stream().anyMatch(c->c.getAlias().equals(nuevoAlias))){
+                salida.writeUTF(NOK);
+                return;
             }
+             // El cliente se conecta con su alias
+            //if (CON.equals(comando)) {
+            cliente.setAlias(nuevoAlias);
+            listaClientes.add(cliente);
+            System.out.println(cliente.getAlias() + " conectado.");
+            notificarListaUsuarios(); // Envía la lista de usuarios a todos
+            salida.writeUTF(CON +" "+cliente.getAlias());
+            //continue; // Salta al siguiente ciclo
+            //}
             //cliente.setAlias(parametro);
 
             while (cliente.getSocketCliente().isConnected()) {

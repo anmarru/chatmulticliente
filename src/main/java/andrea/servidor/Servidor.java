@@ -27,16 +27,16 @@ public class Servidor {
                 Cliente nuevoCliente = new Cliente(socketCliente);
 
                 //añadir el cliente a la lista de clientes
-                synchronized (listaClientes) {
+                /*synchronized (listaClientes) {
                     //listaClientes.add(nuevoCliente);
                     // Verificar si el alias ya existe
                     /* if (listaClientes.stream().anyMatch(c -> c.getAlias() != null && c.getAlias().equals(nuevoCliente.getAlias()))) {
                         System.out.println("Alias duplicado, rechazando conexión.");
                         socketCliente.close();
                         continue;
-                    } */
+                    } 
                     listaClientes.add(nuevoCliente);
-                }
+                }*/
 
                 //crear un hilo para gestionar al cliente
                 HiloConexion hiloConexion = new HiloConexion(nuevoCliente, listaClientes);

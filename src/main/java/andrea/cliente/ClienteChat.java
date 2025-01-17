@@ -48,8 +48,8 @@ public class ClienteChat {
         }
 
         try {
-            socket = new Socket("79.170.148.110", 4444);
-          //  socket = new Socket("localhost", 4444);
+            socket = new Socket("172.18.184.85", 4444);
+            //socket = new Socket("localhost", 4444);
             
             entrada = new DataInputStream(socket.getInputStream());
             salida = new DataOutputStream(socket.getOutputStream());
