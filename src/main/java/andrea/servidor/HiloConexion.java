@@ -2,15 +2,20 @@ package andrea.servidor;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Clase que maneja la conexión entre un cliente y el servidor
+ * Implementa la interfaz Runnable para ejecutarse en un hilo separado
+ */
 public class HiloConexion implements Runnable {
 
     private final Cliente cliente;
     private final List<Cliente> listaClientes;
 
-    // constantes para los comandos
+    // constantes para los comandos del protocolo de comunicacion
     private static final String CON = "CON";
     private static final String MSG = "MSG";
     private static final String EXI = "EXI";
@@ -23,58 +28,62 @@ public class HiloConexion implements Runnable {
     private static final String POK = "POK";
     private static final String CHT = "CHT";
 
-    //inicializo con el cliente y la lista compartida de los clientes
+    /**
+     * Constructor que inicializa el hilo de conexión con un cliente y la lista
+     * compartida de clientes conectados
+     * 
+     * @param cliente       El cliente que se conectará al servidor
+     * @param listaClientes Lista compartida de clientes conectados al servidor
+     */
     public HiloConexion(Cliente cliente, List<Cliente> listaClientes) {
         this.cliente = cliente;
-        //esta es la lista que comparte los clientes
         this.listaClientes = listaClientes;
     }
 
+    /**
+     * Método que ejecuta la lógica de comunicación entre el cliente y el servidor.
+     * Escucha mensajes del cliente y los procesa según el protocolo definido.
+     */
     @Override
     public void run() {
-        //canales de entrada y salida al cliente
+        // canales de entrada y salida al cliente
         try (DataInputStream entrada = new DataInputStream(cliente.getSocketCliente().getInputStream());
                 DataOutputStream salida = new DataOutputStream(cliente.getSocketCliente().getOutputStream())) {
 
-            //asigno la salida del cliente para que pueda recibir mensajes
             cliente.setSalida(salida);
-
             String mensajeRecibido = entrada.readUTF();
 
-            //validacion para los mensajes
+            // validacion para los mensajes
             if (!mensajeRecibido.matches("^[A-Z]{3}\\s.*$")) {
                 salida.writeUTF(NOK);
                 return;
             }
 
-            //separo el mansaje en dos partes comado y mensaje
+            // separo el mansaje en dos partes comado y mensaje
             String[] parametroComandos = mensajeRecibido.split(" ", 2);
             String comando = parametroComandos[0];
             String parametro = parametroComandos.length > 1 ? parametroComandos[1] : " ";
 
-            // validacion de conexion si no enviamos al cliente NOK
+            // validacion de conexion
             if (!CON.equals(comando)) {
                 salida.writeUTF(NOK);
                 return;
             }
 
-            String nuevoAlias=parametro;
+            String nuevoAlias = parametro;
             System.out.println(nuevoAlias);
-            
-            if(listaClientes.stream().anyMatch(c->c.getAlias().equals(nuevoAlias))){
+
+            if (listaClientes.stream().anyMatch(c -> c.getAlias().equals(nuevoAlias))) {
                 salida.writeUTF(NOK);
                 return;
             }
-             // El cliente se conecta con su alias
-            //if (CON.equals(comando)) {
+
             cliente.setAlias(nuevoAlias);
             listaClientes.add(cliente);
             System.out.println(cliente.getAlias() + " conectado.");
-            notificarListaUsuarios(); // Envía la lista de usuarios a todos
-            salida.writeUTF(CON +" "+cliente.getAlias());
-            //continue; // Salta al siguiente ciclo
-            //}
-            //cliente.setAlias(parametro);
+            notificarNuevoUsuario();
+            salida.writeUTF(OK);
+            notificarListaUsuarios(salida);
 
             while (cliente.getSocketCliente().isConnected()) {
                 mensajeRecibido = entrada.readUTF();
@@ -104,45 +113,40 @@ public class HiloConexion implements Runnable {
                         break;
 
                     case EXI:
-                    /*  System.out.println(cliente.getAlias() + " Se desconecto");
-                        listaClientes.remove(cliente);
-                        notificarListaUsuarios();
-                        return;*/
+
                         try {
                             System.out.println(cliente.getAlias() + " se desconectó");
-                            listaClientes.remove(cliente); // Elimina al cliente de la lista
-                            notificarListaUsuarios(); // Notifica a los demás usuarios
-                            cliente.getSocketCliente().close(); // Cierra el socket
-                            entrada.close(); // Cierra el flujo de entrada
-                            salida.close(); // Cierra el flujo de salida
+                            listaClientes.remove(cliente);
+                            notificarSalidaUsuario();
+                            cliente.getSocketCliente().close();
+                            entrada.close();
+                            salida.close();
                         } catch (Exception e) {
-                            System.out.println("Error al cerrar conexión del cliente " + cliente.getAlias() + ": " + e.getMessage());
+                            System.out.println("Error al cerrar conexión del cliente " + cliente.getAlias() + ": "
+                                    + e.getMessage());
                         }
-                        return; // Sale del método y rompe el ciclo
+                        return;
 
                     case NOP:
-                        // TODO completar
                         salida.writeUTF(NOK);
                         break;
-                    // envio la lista de clientes conectados
-                    case LST:
+
+                    case LUS:
                         StringBuilder clientes = new StringBuilder();
                         for (Cliente c : listaClientes) {
-                            clientes.append(c.getAlias()).append(", ");
+                            clientes.append(c.getAlias()).append(",");
                         }
                         salida.writeUTF(LST + " " + clientes.toString().trim());
                         break;
-                    // mensaje a todos
+
                     case MSG:
                         for (Cliente c : listaClientes) {
-                            if (!c.equals(cliente)) {
-                                c.getSalida().writeUTF(CHT + " " + cliente.getAlias() + ": " + parametro);
-                            }
+                            c.getSalida().writeUTF(CHT + " " + cliente.getAlias() + " " + parametro);
                         }
                         break;
 
                     default:
-                        salida.writeUTF(NOK);
+                        // salida.writeUTF(NOK);
                         break;
                 }
             }
@@ -154,26 +158,40 @@ public class HiloConexion implements Runnable {
 
     }
 
-    private void notificarListaUsuarios() {
-        StringBuilder clientes = new StringBuilder();
+    /**
+     * Notifica a todos los clientes que un nuevo usuario se ha conectado
+     * 
+     * @throws IOException Si ocurre un error al enviar el mensaje
+     */
+    private void notificarNuevoUsuario() throws IOException {
         for (Cliente c : listaClientes) {
-            clientes.append(c.getAlias()).append(", ");
-        }
-        if (clientes.length() > 0) {
-            clientes.setLength(clientes.length() - 2); //elimina la última coma y espacio
-        }
-        String mensaje = LST + " " + clientes.toString();
-    
-        for (Cliente c : listaClientes) {
-            try {
-                c.getSalida().writeUTF(mensaje);
-            } catch (Exception e) {
-                System.out.println("Error al enviar lista de usuarios a " + c.getAlias());
-            }
+            if (c != cliente)
+                c.getSalida().writeUTF(CON + " " + cliente.getAlias());
         }
     }
 
+    /**
+     * Notifica a todos los clientes que un usuario se ha desconectado.
+     * 
+     * @throws IOException Si ocurre un error al enviar el mensaje.
+     */
+    private void notificarSalidaUsuario() throws IOException {
+        for (Cliente c : listaClientes) {
+            if (c != cliente)
+                c.getSalida().writeUTF(EXI + " " + cliente.getAlias());
+        }
+    }
 
-    
-
+    /**
+     * Envía la lista de usuarios conectados al cliente que se ha conectado.
+     * 
+     * @param salida Flujo de salida del cliente.
+     * @throws IOException Si ocurre un error al enviar la lista.
+     */
+    private void notificarListaUsuarios(DataOutputStream salida) throws IOException {
+        salida.writeUTF(LST + " " + listaClientes.stream()
+                .map(Cliente::getAlias)
+                .reduce((a, b) -> a + "," + b)
+                .orElse(""));
+    }
 }

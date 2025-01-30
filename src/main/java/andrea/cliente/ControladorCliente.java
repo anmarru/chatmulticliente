@@ -3,6 +3,8 @@ package andrea.cliente;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.net.Socket;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 import javafx.application.Platform;
@@ -17,6 +19,11 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 
+/**
+ * Controlador de la interfaz del cliente para interactuar con servidor chat.
+ * Gestiona la conexión al servidor, envío y recepción de mensajes, y la
+ * interacción con los elementos de la interfaz.
+ */
 public class ControladorCliente {
 
     @FXML
@@ -27,6 +34,8 @@ public class ControladorCliente {
     private TextArea chatArea;
     @FXML
     private TextField inputMensaje;
+    @FXML
+    private TextField inputDestino;
     @FXML
     private Button btnEnviar;
     @FXML
@@ -39,6 +48,13 @@ public class ControladorCliente {
     private DataOutputStream salida;// flujo de salida para enviar enviar mej al servidor
     private String alias;
 
+    /**
+     * Conecta al cliente con el servidor utilizando el alias proporcionado
+     * Valida el alias, establece la conexión con el servidor y habilita los
+     * controles
+     *
+     * @param event El evento que activa la acción de conexión
+     */
     @FXML
     private void conectar(ActionEvent event) {
         alias = inputAlias.getText().trim();
@@ -48,32 +64,25 @@ public class ControladorCliente {
         }
 
         try {
-            socket = new Socket("172.18.184.85", 4444);
-            //socket = new Socket("localhost", 4444);
-            
+            // socket = new Socket("79.170.148.110", 4444);
+            socket = new Socket("localhost", 4444);
+
             entrada = new DataInputStream(socket.getInputStream());
             salida = new DataOutputStream(socket.getOutputStream());
 
-            // enviar comando de conexión al servidor
+            // enviar comando de conexión
             salida.writeUTF("CON " + alias);
-
-            //escuchar respuesta del servidor para validar la conexión
-          /*   String respuesta = entrada.readUTF();
-            if (respuesta.equals("NOK Alias duplicado")) {
-                mostrarMensaje("Alias duplicado, elige otro.");
-                socket.close();
-                return;
-            } */
-
+            
             // inicia un hilo para escuchar mensajes del servidor
-            Thread listenerThread = new Thread(this::escucharMensajes);
+            Thread hiloEscuchaCliente = new Thread(new HiloEscuchaCliente(entrada, this));
             // hilo de usuario no se ve
-            listenerThread.setDaemon(true);
-            listenerThread.start();
+            // hiloEscuchaCliente.setDaemon(true);
+            hiloEscuchaCliente.start();
 
-            //mostrarMensaje("Conectado al servidor como: " + alias);
+            // mostrarMensaje("Conectado al servidor como: " + alias);
             btnConectar.setDisable(true);
             inputAlias.setDisable(true);
+            listaUsuarios.setVisible(true);
             btnEnviar.setDisable(false);
             btnDesconectar.setDisable(false);
 
@@ -82,113 +91,156 @@ public class ControladorCliente {
         }
     }
 
+    /**
+     * Envía un mensaje al servidor. Puede ser un mensaje público o privado
+     *
+     * @param event El evento que activa el envío del mensaje
+     */
     @FXML
     private void enviarMensaje(ActionEvent event) {
         String mensaje = inputMensaje.getText().trim();
+
+        String destinatario = inputDestino.getText().trim();
+
         if (mensaje.isEmpty()) {
             return;
         }
 
         try {
-            salida.writeUTF("MSG "+mensaje);
+            if (!destinatario.isEmpty()) {
+                // mensaje privado
+                salida.writeUTF("PRV " + destinatario + " " + mensaje);
+                chatArea.appendText("Tú -> " + destinatario + ": " + mensaje + "\n");
+            } else {
+                // mensaje público
+
+                salida.writeUTF("MSG " + mensaje);
+            }
             inputMensaje.clear();
+            inputDestino.clear(); // limpiar el destinatario después de enviar
         } catch (Exception e) {
             mostrarMensaje("Error al enviar el mensaje: " + e.getMessage());
         }
     }
 
-    /*@FXML
-    private void desconectar(ActionEvent event) {
-        try {
-            if (socket != null && !socket.isClosed()) {
-                salida.writeUTF("EXI"); // Notificar al servidor que este cliente se desconecta
-                socket.close();
-            }
-            mostrarMensaje("Desconectado del servidor.");
-        } catch (Exception e) {
-            mostrarMensaje("Error al desconectar: " + e.getMessage());
-        } finally {
-            Platform.runLater(() -> {
-                btnConectar.setDisable(false);
-                inputAlias.setDisable(false);
-                btnEnviar.setDisable(true);
-                btnDesconectar.setDisable(true);
-                
-            });
-        }
-    }*/
+    /**
+     * Desconecta al cliente del servidor con una confirmación previa por parte del
+     * usuario
+     * Muestra un mensaje de confirmación y cierra la ventana si el usuario acepta
+     *
+     * @param event El evento que activa la acción de desconexión.
+     */
     @FXML
-private void desconectar(ActionEvent event) {
-    // Mostrar una alerta de confirmación antes de proceder
-    Alert alerta = new Alert(Alert.AlertType.CONFIRMATION);
-    alerta.setTitle("Confirmar desconexión");
-    alerta.setHeaderText("¿Estás seguro de que deseas desconectarte?");
-    alerta.setContentText("Si te desconectas, se cerrará la ventana.");
+    private void desconectar(ActionEvent event) {
+        // Mostrar una alerta de confirmación antes de proceder
+        Alert alerta = new Alert(Alert.AlertType.CONFIRMATION);
+        alerta.setTitle("Confirmar desconexión");
+        alerta.setHeaderText("¿Estás seguro de que deseas desconectarte?");
+        alerta.setContentText("Si te desconectas, se cerrará la ventana.");
 
-    // Esperar la respuesta del usuario
-    Optional<ButtonType> resultado = alerta.showAndWait();
-    if (resultado.isPresent() && resultado.get() == ButtonType.OK) {
-        try {
-            if (socket != null && !socket.isClosed()) {
-                salida.writeUTF("EXI"); // Notificar al servidor que este cliente se desconecta
-                socket.close();
+        // Esperar la respuesta del usuario
+        Optional<ButtonType> resultado = alerta.showAndWait();
+        if (resultado.isPresent() && resultado.get() == ButtonType.OK) {
+            try {
+                if (socket != null && !socket.isClosed()) {
+                    salida.writeUTF("EXI"); // notificar al servidor que este cliente se desconecta
+                    socket.close();
+                }
+                mostrarMensaje("Desconectado del servidor.");
+            } catch (Exception e) {
+                mostrarMensaje("Error al desconectar: " + e.getMessage());
+            } finally {
+                Platform.runLater(() -> {
+                    Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+                    stage.close(); //cerrar la ventana
+                });
             }
-            mostrarMensaje("Desconectado del servidor.");
-        } catch (Exception e) {
-            mostrarMensaje("Error al desconectar: " + e.getMessage());
-        } finally {
-            Platform.runLater(() -> {
-                // Obtener el Stage desde el evento o algún nodo
-                Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-                stage.close(); // Cerrar la ventana
-            });
-        }
-    } else {
-        // El usuario canceló la desconexión
-        mostrarMensaje("La desconexión fue cancelada.");
-    }
-}
-
-
-    // se mantiene escuchando los mensajes del servidormientras esta conectado
-    // los mensajes recibidos se pueden enseñar en la ui usando Platform.runLater()
-    private void escucharMensajes() {
-        try {
-            while (socket != null && socket.isConnected()) {
-                String mensaje = entrada.readUTF();
-                Platform.runLater(() -> procesarMensaje(mensaje));
-            }
-        } catch (Exception e) {
-            Platform.runLater(() -> mostrarMensaje("Conexión cerrada"));
-        }
-    }
-
-    private void procesarMensaje(String mensaje) {
-        if (mensaje.startsWith("LUS")) {
-            // Actualizar lista de usuarios conectados
-            String[] usuarios = mensaje.substring(4).split(", ");
-            // listaUsuarios.getItems().setAll(usuarios);
-            Platform.runLater(() -> listaUsuarios.getItems().setAll(usuarios));
-
         } else {
-            // Mostrar mensaje en el área de chat
-            chatArea.appendText(mensaje + "\n");
+            // usuario canceló la desconexión
+            mostrarMensaje("La desconexión fue cancelada.");
         }
     }
 
-
-
+    /**
+     * Muestra un mensaje en el área de chat
+     *
+     * @param mensaje El mensaje que se mostrará en el área de chat
+     */
     private void mostrarMensaje(String mensaje) {
         chatArea.appendText(mensaje + "\n");
     }
 
+    /**
+     * Inicializa el controlador. Configura los botones y campos de la interfaz al
+     * inicio
+     */
     @FXML
     public void initialize() {
         btnEnviar.setDisable(true);
         btnDesconectar.setDisable(true);
     }
 
-    public void addUsuarioNuevo(String usuario){
-        listaUsuarios.getItems();
+    /**
+     * Añade un nuevo usuario a la lista de usuarios conectados
+     *
+     * @param usuario El nombre del nuevo usuario que se añade a la lista
+     */
+    public void addUsuarioNuevo(String usuario) {
+        listaUsuarios.getItems().add(usuario);
+    }
+
+    /**
+     * Recibe un mensaje general y lo muestra en el área de chat
+     *
+     * @param mensaje El mensaje que se recibirá y mostrará en el chat
+     */
+    public void recibirMensaje(String mensaje) {
+        chatArea.appendText(mensaje + "\n");
+    }
+
+    /**
+     * Recibe un mensaje privado y lo muestra en el área de chat
+     *
+     * @param mensaje El mensaje privado que se recibirá y mostrará en el chat
+     */
+    public void recibirMensajePrivado(String mensaje) {
+        chatArea.appendText(mensaje + "\n");
+    }
+
+    /**
+     * Actualiza la lista de usuarios conectados
+     *
+     * @param usuarios Una cadena de texto que contiene los usuarios conectados,
+     *                 separados por comas
+     */
+    public void recibirUsuarios(String usuarios) {
+        List<String> lista = Arrays.asList(usuarios.split(","));
+        listaUsuarios.getItems().clear();
+        listaUsuarios.getItems().addAll(lista);
+    }
+
+    /**
+     * Elimina un usuario de la lista de usuarios conectados
+     *
+     * @param usuario El nombre del usuario que se debe eliminar de la lista
+     */
+    public void deleteUsuario(String usuario) {
+        listaUsuarios.getItems().remove(usuario);
+    }
+
+    /**
+     * Muestra un mensaje en el área de chat indicando que la conexión ha sido
+     * establecida correctamente
+     */
+    public void conexionOk() {
+        chatArea.appendText(" conexion establecida\n");
+    }
+
+    public void conexionNOk() {
+        chatArea.appendText("ERROR: Usuario con el mismo alias!!\n");
+        btnEnviar.setDisable(true);
+        btnDesconectar.setDisable(true);
+        inputAlias.setDisable(false);
+        btnConectar.setDisable(false);
     }
 }

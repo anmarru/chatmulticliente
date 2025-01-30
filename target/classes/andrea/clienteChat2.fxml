@@ -10,7 +10,7 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
-<VBox alignment="CENTER" prefHeight="600" prefWidth="400" spacing="10" stylesheets="@estilo_css/estilo.css" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="andrea.cliente.ClienteChat">
+<VBox alignment="CENTER" prefHeight="600" prefWidth="400" spacing="10" stylesheets="@estilo_css/estilo.css" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="andrea.cliente.ControladorCliente">
 
 
     <HBox alignment="CENTER" spacing="6.0">
@@ -28,6 +28,7 @@
 
 
     <HBox alignment="CENTER" spacing="10">
+        <TextField fx:id="inputDestino" prefWidth="150" promptText="Alias destinatario (opcional)" />
         <TextField fx:id="inputMensaje" prefWidth="250" promptText="Escribe tu mensaje aquí" />
         <Button fx:id="btnEnviar" onAction="#enviarMensaje" text="Enviar" />
     </HBox>
@@ -35,7 +36,7 @@
 
     <VBox alignment="CENTER" spacing="5">
         <Label text="Usuarios conectados:" />
-        <ListView fx:id="listaUsuarios" prefHeight="150" />
+        <ListView fx:id="listaUsuarios" prefHeight="222.0" prefWidth="400.0" />
     </VBox>
 
 
